@@ -67,6 +67,8 @@ create policy "house all" on public.settings    for all to anon using (true) wit
 
 grant usage on schema public to anon;
 grant select, insert, update, delete on public.tasks, public.completions, public.settings to anon;
+alter view public.house_stats set (security_invoker = on);
+alter view public.completion_days set (security_invoker = on);
 grant select on public.house_stats     to anon;
 grant select on public.completion_days to anon;
 

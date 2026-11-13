@@ -1,5 +1,5 @@
 // Offline shell cache. Bump VERSION when you change files so phones pick up updates.
-const VERSION = 'hq-v3';
+const VERSION = 'hq-v4';
 const SHELL = ['./', './index.html', './app.js', './store.js', './avatar.js', './config.js', './manifest.webmanifest', './icons/icon-192.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {

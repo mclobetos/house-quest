@@ -3,8 +3,8 @@
 // 2. Paste your GitHub Pages app link in APP_URL so tapping the widget opens the app.
 // Works as a Small or Medium widget.
 
-const SUPABASE_URL = 'https://gjjecmpfuhwlkmppmfjv.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_X4K4-Wy6hSiH4MHCbx8m9w_P5kymGOq';
+const SUPABASE_URL = 'https://xafoebtvpfzgzyhsyrim.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_xVLRm2iXg4sHRlqn6MXzXg_h_O9Ipt5';
 const APP_URL = 'https://mclobetos.github.io/house-quest/';
 
 // ---------- same leveling math as the app ----------
