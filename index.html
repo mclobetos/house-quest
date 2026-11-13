@@ -193,6 +193,42 @@ h2,h3{font-family:var(--display);font-weight:400;letter-spacing:.3px;margin:0}
 .lu-title{font-family:var(--display);font-size:18px;margin-bottom:10px}
 .lu-unlock{font-size:13.5px;font-weight:800;color:var(--ink);background:var(--teal);border-radius:12px;padding:8px;margin-bottom:14px}
 .lu-card .btn{width:100%}
+
+/* announcements */
+.ann-panel{padding:12px 14px;margin-top:14px}
+.ann-lines{display:flex;flex-direction:column;gap:8px}
+.ann-line{display:flex;align-items:baseline;gap:8px;font-size:14px;min-width:0}
+.ann-who{font-family:var(--display);font-size:13px;color:var(--gold);flex:none;min-width:38px}
+.ann-msg{flex:1;min-width:0;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ann-time{flex:none;font-size:12px;color:var(--muted);font-weight:700}
+.ann-btn{margin:12px 0 0 !important}
+.preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.preset{position:relative;display:flex;align-items:center;gap:8px;text-align:left;padding:10px;border-radius:14px;background:#120f29;border:2px solid #3b3570;font-weight:800;font-size:13.5px;line-height:1.2}
+.preset:active{transform:scale(.97);background:#2a2550}
+.preset .pe{font-size:22px;flex:none}
+.preset.editing{border-style:dashed}
+.preset .px{position:absolute;top:-8px;right:-6px;width:22px;height:22px;border-radius:50%;background:var(--coral);color:var(--ink);border:2px solid var(--ink);display:grid;place-items:center;font-size:14px}
+.linkish{display:block;margin:10px auto 0;color:var(--muted);font-weight:800;font-size:13px;text-decoration:underline}
+.custom{padding:12px;margin-top:14px;background:#1b1838}
+.custom-row{display:flex;gap:8px}
+.custom-row .emo{width:58px;flex:none;text-align:center;padding:10px 4px}
+.chk{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:700;color:var(--muted);margin-top:10px}
+.chk input{width:18px;height:18px;accent-color:var(--gold)}
+.custom .btn.wide{margin:10px 0 0}
+.hist{display:flex;gap:8px;align-items:baseline;padding:8px 2px;border-bottom:1.5px dashed rgba(255,255,255,.08);font-size:13.5px}
+.hist-who{font-family:var(--display);font-size:12px;color:var(--teal);flex:none;min-width:38px}
+.hist.mine .hist-who{color:var(--gold)}
+.hist-msg{flex:1;font-weight:700;min-width:0}
+.hist-time{flex:none;font-size:11.5px;color:var(--muted)}
+#ann{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 10px);width:min(94vw,500px);transform:translate(-50%,-160%);transition:transform .45s cubic-bezier(.2,1.3,.4,1);z-index:45;cursor:pointer}
+#ann.show{transform:translate(-50%,0)}
+.ann-banner{display:flex;gap:10px;align-items:center;background:linear-gradient(120deg,#ff6b5b,#ffcf4a);color:var(--ink);border:3px solid var(--ink);border-radius:20px;box-shadow:5px 5px 0 var(--ink);padding:8px 14px 8px 8px;animation:wiggle .6s .45s ease}
+@keyframes wiggle{25%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}75%{transform:rotate(-1deg)}}
+.ann-av{width:54px;height:60px;flex:none;background:rgba(12,10,28,.15);border-radius:14px;overflow:hidden}
+.ann-av svg{width:100%;height:auto;margin-top:-4px}
+.ann-head{font-size:12px;font-weight:800;opacity:.85}
+.ann-head span{opacity:.75;margin-left:4px}
+.ann-text{font-family:var(--display);font-size:18px;line-height:1.2}
 </style>
 </head>
 <body>
@@ -200,6 +236,7 @@ h2,h3{font-family:var(--display);font-weight:400;letter-spacing:.3px;margin:0}
 <div id="sheet"></div>
 <div id="levelup"></div>
 <div id="toast"></div>
+<div id="ann"></div>
 <script src="config.js"></script>
 <script type="module" src="app.js"></script>
 </body>

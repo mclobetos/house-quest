@@ -38,6 +38,7 @@ class LocalStore {
       d = {
         tasks: SEED_TASKS.map((t, i) => ({ id: uuid(), title: t[0], xp: t[1], recurrence: t[2], icon: t[3], category: t[4], archived: false, sort: (i + 1) * 10 })),
         completions: [],
+        announcements: [],
         settings: { house: { name: 'House of Josh & Nat' } },
       };
     }
@@ -55,7 +56,13 @@ class LocalStore {
       totalQuests: all.length,
       days: [...new Set(all.map(c => dayKey(c.completed_at)))].sort().reverse(),
       settings: { ...this.d.settings },
+      announcements: (this.d.announcements || []).slice().sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 40),
+      annReady: true,
     };
+  }
+  async addAnnouncement(a) {
+    (this.d.announcements = this.d.announcements || []).push({ id: uuid(), created_at: new Date().toISOString(), ...a });
+    this.save();
   }
   async addCompletion(c, task) {
     this.d.completions.push({ id: uuid(), completed_at: new Date().toISOString(), ...c });
@@ -86,6 +93,7 @@ class SupaStore {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, ping)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'completions' }, ping)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, ping)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'announcements' }, ping)
       .subscribe();
     this._ping = ping;
   }
@@ -102,6 +110,8 @@ class SupaStore {
     for (const r of [t, c, s, d, st]) if (r.error) throw r.error;
     const settings = {};
     st.data.forEach(r => { settings[r.key] = r.value; });
+    // announcements are optional: if the table isn't set up yet, the rest of the app still works
+    const an = await this.sb.from('announcements').select('*').order('created_at', { ascending: false }).limit(40);
     return {
       tasks: t.data,
       completions: c.data,
@@ -109,9 +119,12 @@ class SupaStore {
       totalQuests: s.data.total_quests,
       days: d.data.map(r => r.day),
       settings,
+      announcements: an.error ? [] : an.data,
+      annReady: !an.error,
     };
   }
   async _do(p) { const r = await p; if (r.error) throw r.error; this._ping(); return r; }
+  async addAnnouncement(a) { await this._do(this.sb.from('announcements').insert(a)); }
   async addCompletion(c, task) {
     await this._do(this.sb.from('completions').insert(c));
     if (task && task.recurrence === 'once') await this._do(this.sb.from('tasks').update({ archived: true }).eq('id', task.id));

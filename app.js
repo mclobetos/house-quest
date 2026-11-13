@@ -30,6 +30,14 @@ const UNLOCKS = {
   2: 'Blaze aura', 3: 'Zigzag pattern', 4: 'Cloak outfit', 5: 'Golden egg prop', 6: 'Star pattern', 10: 'Prismatic aura',
 };
 
+const DEFAULT_PRESETS = [
+  ['💩', "I'm pooping!"], ['🚽', 'I need to poop!'], ['✅', 'Just pooped!'],
+  ['🏋️', 'Heading to the gym'], ['🐺', 'Walking Ocean'], ['🛒', "At the store, need anything?"],
+  ['🍳', "Food's ready!"], ['🏡', "At my parents'"], ['🎮', 'Gaming, do not disturb'],
+  ['🎸', 'Shredding'], ['🥚', 'In my craft era'], ['😴', 'Napping'],
+  ['🚗', 'On my way home'], ['❤️', 'Love you'],
+].map(([emoji, text]) => ({ emoji, text }));
+
 const TIERS = [
   { xp: 10, label: 'Quick' }, { xp: 20, label: 'Normal' }, { xp: 35, label: 'Hard' }, { xp: 60, label: 'Boss' },
 ];
@@ -43,7 +51,8 @@ const PET_LINES = {
 // ---------- State ----------
 const S = {
   store: null,
-  data: { tasks: [], completions: [], totalXp: 0, totalQuests: 0, days: [], settings: {} },
+  data: { tasks: [], completions: [], totalXp: 0, totalQuests: 0, days: [], settings: {}, announcements: [], annReady: true },
+  annEdit: false,
   tab: 'quests',
   me: lsGet('hq_me'),
   loaded: false,
@@ -84,6 +93,21 @@ function avatars() {
     nat: { ...DEFAULT_AVATARS.nat, ...(s.avatar_nat || {}) },
   };
 }
+function presets() {
+  const p = S.data.settings.presets;
+  return Array.isArray(p) ? p : DEFAULT_PRESETS;
+}
+const other = () => (S.me === 'nat' ? 'josh' : 'nat');
+function timeAgo(iso) {
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 45) return 'just now';
+  if (s < 3600) return `${Math.round(s / 60)}m ago`;
+  if (s < 86400) return `${Math.round(s / 3600)}h ago`;
+  const d = new Date(iso);
+  return d.toLocaleDateString(undefined, { weekday: 'short' }) + ' ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+const clockTime = (iso) => new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
 function house() { return { name: 'House of Josh & Nat', ...(S.data.settings.house || {}) }; }
 
 // ---------- Render ----------
@@ -158,6 +182,7 @@ function renderQuests() {
     <div class="stat panel"><b>${todayXp}</b><span>XP today</span></div>
     <div class="stat panel"><b>${S.data.totalQuests}</b><span>quests cleared</span></div>
   </section>`;
+  html += announcePanel();
   for (const [rec, label, sub] of groups) {
     const list = tasks.filter(t => t.recurrence === rec);
     if (!list.length && rec === 'once') continue;
@@ -171,6 +196,21 @@ function renderQuests() {
   }
   html += `<button class="fab" id="addQuest" aria-label="Add quest">＋</button>`;
   return html;
+}
+
+function announcePanel() {
+  const a = avatars();
+  const latest = (k) => S.data.announcements.find(x => x.from_who === k);
+  const line = (k) => {
+    const m = latest(k);
+    return `<div class="ann-line"><span class="ann-who">${esc(a[k].name)}</span>${m
+      ? `<span class="ann-msg">${esc(m.emoji)} ${esc(m.text)}</span><span class="ann-time">${timeAgo(m.created_at)}</span>`
+      : `<span class="ann-msg muted">No announcements yet</span>`}</div>`;
+  };
+  return `<section class="ann-panel panel">
+    <div class="ann-lines">${line('josh')}${line('nat')}</div>
+    <button class="btn primary wide ann-btn" id="openAnnounce">📣 Announce</button>
+  </section>`;
 }
 
 function questCard(t, c) {
@@ -283,6 +323,7 @@ function bindView() {
     toast(lines[Math.floor(Math.random() * lines.length)]);
     b.classList.remove('hop'); void b.offsetWidth; b.classList.add('hop');
   });
+  const oa = $('#openAnnounce'); if (oa) oa.onclick = openAnnounce;
   const add = $('#addQuest') || $('#addQuest2');
   if (add) add.onclick = () => openTaskEditor(null);
   const add2 = $('#addQuest2'); if (add2) add2.onclick = () => openTaskEditor(null);
@@ -389,6 +430,88 @@ function openTaskEditor(id) {
   };
 }
 
+// ---------- Announcements ----------
+function openAnnounce() {
+  const a = avatars();
+  if (!S.data.annReady) {
+    const el = sheet(`<div class="sh-icon">📣</div><h3>Almost there</h3>
+      <p class="muted">Announcements need one quick database update first. Run the announcements SQL snippet in Supabase, then reopen the app.</p>
+      <div class="sh-actions"><button class="btn primary" data-x="ok" style="grid-column:1/-1">OK</button></div>`);
+    el.querySelector('[data-x=ok]').onclick = closeSheet;
+    return;
+  }
+  const list = presets();
+  const hist = S.data.announcements.slice(0, 20);
+  const el = sheet(`<h3>📣 Announce to ${esc(a[other()].name)}</h3>
+    <p class="muted small">${S.annEdit ? 'Tap × to remove a button.' : 'Tap one to send it instantly.'}</p>
+    <div class="preset-grid">
+      ${list.map((p, i) => `<button class="preset ${S.annEdit ? 'editing' : ''}" data-p="${i}"><span class="pe">${esc(p.emoji)}</span><span class="pt">${esc(p.text)}</span>${S.annEdit ? '<b class="px">×</b>' : ''}</button>`).join('')}
+    </div>
+    <button class="linkish" data-x="edit">${S.annEdit ? 'Done editing' : 'Edit buttons'}</button>
+    <div class="custom panel">
+      <div class="ed-label">Custom announcement</div>
+      <div class="custom-row">
+        <input class="inp emo" id="cEmoji" value="📣" maxlength="4" aria-label="Emoji">
+        <input class="inp" id="cText" maxlength="80" placeholder="Type anything…">
+      </div>
+      <label class="chk"><input type="checkbox" id="cSave"> Save as a button</label>
+      <button class="btn primary wide" data-x="send">Send</button>
+    </div>
+    ${hist.length ? `<div class="ed-label" style="margin-top:16px">Recent</div>
+      ${hist.map(m => `<div class="hist ${m.from_who === S.me ? 'mine' : ''}"><span class="hist-who">${esc(a[m.from_who]?.name || m.from_who)}</span><span class="hist-msg">${esc(m.emoji)} ${esc(m.text)}</span><span class="hist-time">${timeAgo(m.created_at)}</span></div>`).join('')}` : ''}`);
+
+  el.querySelectorAll('[data-p]').forEach(b => b.onclick = async () => {
+    const i = +b.dataset.p;
+    if (S.annEdit) {
+      const next = list.filter((_, j) => j !== i);
+      await safe(() => S.store.setSetting('presets', next));
+      S.data.settings.presets = next; openAnnounce();
+      return;
+    }
+    send(list[i].emoji, list[i].text);
+  });
+  el.querySelector('[data-x=edit]').onclick = () => { S.annEdit = !S.annEdit; openAnnounce(); };
+  el.querySelector('[data-x=send]').onclick = async () => {
+    const text = el.querySelector('#cText').value.trim();
+    if (!text) { el.querySelector('#cText').focus(); return; }
+    const emoji = el.querySelector('#cEmoji').value.trim() || '📣';
+    if (el.querySelector('#cSave').checked) {
+      const next = [...list, { emoji, text }];
+      await safe(() => S.store.setSetting('presets', next));
+    }
+    send(emoji, text);
+  };
+}
+
+async function send(emoji, text) {
+  closeSheet(); S.annEdit = false;
+  const a = avatars();
+  await safe(async () => {
+    await S.store.addAnnouncement({ from_who: S.me, emoji, text });
+    toast(`Sent to ${a[other()].name}: ${emoji} ${text}`);
+  });
+}
+
+let bannerTimer;
+function checkAnnouncements() {
+  const incoming = S.data.announcements.find(m => m.from_who !== S.me);
+  if (!incoming) return;
+  const seen = lsGet('hq_seen_ann');
+  if (!seen) { lsSet('hq_seen_ann', incoming.created_at); return; }
+  if (incoming.created_at <= seen) return;
+  lsSet('hq_seen_ann', incoming.created_at);
+  const a = avatars();
+  const who = a[incoming.from_who] || { name: incoming.from_who };
+  const b = $('#ann');
+  b.innerHTML = `<div class="ann-banner">
+    <div class="ann-av">${a[incoming.from_who] ? avatarSVG(a[incoming.from_who], { animate: false }) : ''}</div>
+    <div class="ann-body"><div class="ann-head">📣 ${esc(who.name)} announces <span>${clockTime(incoming.created_at)}</span></div>
+    <div class="ann-text">${esc(incoming.emoji)} ${esc(incoming.text)}</div></div></div>`;
+  b.classList.add('show');
+  b.onclick = () => b.classList.remove('show');
+  clearTimeout(bannerTimer); bannerTimer = setTimeout(() => b.classList.remove('show'), 12000);
+}
+
 // ---------- Effects ----------
 let toastTimer;
 function toast(msg) {
@@ -437,6 +560,7 @@ async function refresh() {
   // don't clobber an in-progress avatar edit
   if (!(S.tab === 'party' && S.draft)) { const sy = window.scrollY; render(); window.scrollTo(0, sy); }
   checkLevelUp();
+  checkAnnouncements();
 }
 
 function shell() {
@@ -453,6 +577,7 @@ function shell() {
   });
   render();
   checkLevelUp();
+  checkAnnouncements();
 }
 
 (async function boot() {
@@ -462,5 +587,6 @@ function shell() {
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refresh(); });
   // re-render at midnight-ish so daily quests reset without reopening
   setInterval(() => { if (document.visibilityState === 'visible') refresh(); }, 5 * 60 * 1000);
+  setInterval(() => { if (S.tab === 'quests' && $('.ann-panel') && !$('#sheet.open')) { const sy = window.scrollY; render(); window.scrollTo(0, sy); } }, 60 * 1000);
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('./sw.js').catch(() => {});
 })();
